@@ -1,0 +1,50 @@
+<?php // $Id$
+
+/**
+ * Implementation of hook_install().
+ */
+function oa_time_schema() {
+
+  $schema = array();
+  $schema['time_entry'] = array(
+    'fields' => array(
+	 // primary key, 'foreign' key of comment id
+	'teid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+      'timestamp' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+      'duration' => array(
+        'type' => 'float',
+        'not null' => TRUE,
+        'unsigned' => FALSE,
+      ),
+      'uid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+      ),
+	  // case id
+      'cid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+      ),	  
+      'note' => array(
+        'type' => 'text',
+      ),
+    ),
+    'primary key' => array('teid'),
+  );
+  return $schema;
+}
+
+function oa_time_install() {
+  drupal_install_schema('oa_time');  
+}
+
+function oa_time_uninstall() {
+  drupal_uninstall_schema('oa_time');
+}

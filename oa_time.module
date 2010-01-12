@@ -1,0 +1,307 @@
+<?php // $Id
+
+/**
+ * Implementation of hook_init()
+ */
+function oa_time_init(){
+
+	drupal_add_js(drupal_get_path('module','oa_time') .'/oa_timer.js');
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function oa_time_menu() {
+  
+  // Time Tracking tab
+  $items['node/%node/oa_time/project'] = array(
+    'page callback' => 'drupal_get_form', 
+    'page arguments' => array('oa_time_tracking_project_form'),
+    'access callback' => 'oa_time_access',    
+    'title' => t('Project Time Tracking'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 10,
+    'file' => 'oa_time_report.inc',
+    
+  );
+  
+  $items['node/%node/oa_time/user'] = array(
+    'page callback' => 'drupal_get_form', 
+    'page arguments' => array('oa_time_tracking_user_form'),
+    'access callback' => 'oa_time_access',    
+    'title' => t('User Time Tracking'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 10,
+    'file' => 'oa_time_report.inc',
+    
+  );
+ 
+  return $items;
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function oa_time_perm() {
+  return array('view all users time tracks');
+}
+
+
+/**
+ * Implementation of a load callback for time entries.
+ */
+function oa_time_load($time = NULL, $node = NULL) {
+  module_load_include('inc', 'oa_time', 'oa_time_entry');
+  if ($time) { 
+
+    if (is_object($time) || is_array($time)) {
+      $row = (array) $time;
+    }
+    else {
+      $row1 = db_fetch_array(db_query("SELECT * FROM {time_entry} te
+             WHERE te.teid = %d ", $time));
+    }
+  }
+  if ($node) $row['cid'] = $node->nid;
+  
+  return New time_entry($row);
+}
+
+
+
+ 
+
+/**
+ * Implementation of hook_comment().
+ */
+function oa_time_comment(&$edit, $op) {
+
+  if ($op == 'insert' || $op == 'update') {    
+  
+     
+     $node = node_load($edit['nid']);   
+     if($node->type == 'casetracker_basic_case'){	 
+	  
+	  $edit['time']['uid'] = $edit['uid'];
+	  $edit['time']['cid'] = $edit['nid'];
+      	  $edit['time']['teid'] = $edit['cid'];
+	  
+      	  $edit['time']['timestamp'] = $edit['timestamp'];
+      	  $edit['time']['duration'] = $edit['casetracker']['duration'];
+      
+      	  $time = oa_time_load($edit['time']);
+      	  $time->set_note($edit['comment']);
+      	  if ($time->duration != NULL && is_numeric($time->duration)) {
+         	$time->save();
+      	  }       
+      }
+    
+  }
+ else if ($op == 'view') {
+	$time_entry_res = db_query('SELECT * FROM {time_entry} WHERE teid = %d ', $edit->cid);
+	$duration_row = db_fetch_array($time_entry_res);
+        	
+	if($duration_row['duration'] > 0){ 
+		$rows = array();
+		$rows[] = array(t('Hours: '.$duration_row['duration']));
+		$edit->comment = theme('table', NULL, $rows, array('class' => 'case_changes')) . $edit->comment;
+		
+	}
+  }
+  else if($op == 'delete'){
+	db_query('DELETE FROM {time_entry} WHERE teid = %d', $edit->cid);
+  }
+}
+
+/**
+ * Time tracking form.
+ */
+function oa_time_form($form_state, $time_entry = NULL, $node = NULL) {
+  if (!$time_entry) $time_entry = oa_time_load(NULL, $node);
+
+  // Make sure the time entry is valid for this context.
+  if (!$time_entry || !$time_entry->validate()) return array();
+
+  $form['time'] = $time_entry->form();
+  $form['time']['#tree'] = TRUE;
+  $form['time']['#time_entry'] = $time_entry;
+
+  if ($node) {
+    $form['time']['cid'] = array('#type' => 'value', '#value' => $node->nid);
+  }
+  return $form;
+}
+
+
+/**
+ * Submit handler for our time entry form, to save a time entry.
+ */
+function oa_time_form_submit($form, &$form_state){
+   	$time_entry= $form['time']['#time_entry'];
+	return $time_entry->save($form_state['values']['time']); 
+}
+
+/**
+ * Access callback for project time tracking
+ */
+
+function oa_time_access(){
+	if(arg(0) == 'node' && is_numeric(arg(1))){
+		$node = node_load(arg(1));		
+		return (casetracker_is_case($node) || casetracker_is_project($node));
+	}else return false;
+}
+
+function oa_time_block_access(){
+		if(arg(0) == 'node' && is_numeric(arg(1)) && arg(2) == NULL){
+            $node = node_load(arg(1));                
+			return (casetracker_is_case($node));
+		} else return false;
+}
+/**
+ * Implementation of hook_form_alter().
+ */
+function oa_time_form_alter(&$form, &$form_state, $form_id) {
+  
+  if ($form_id == 'comment_form') {
+  /** Code from casetracker module **/
+   if (!empty($form['#node'])) {
+    $node = $form['#node'];
+
+    // Add case options to our basic case type.
+    if (casetracker_is_case($node->type)) {
+      $count = count(casetracker_project_options());
+      if ($count == 0) {
+        drupal_set_message(t('You must create a project before adding cases.'), 'error');
+        return;
+      }
+      else {
+        $default_project = null;
+        if (!isset($form['#node']->nid) && is_numeric(arg(3))) {
+          $default_project = arg(3);
+        }
+        oa_time_case_form_common($form, $default_project);
+      }
+    }
+  }
+       
+    $form = array_merge($form, oa_time_form($form_state, NULL, $node));
+     
+      // setting default value of duration
+      if($form['cid']['#value'] != NULL){
+        $time_entry_res = db_query('SELECT * FROM {time_entry} WHERE teid = %d ', $form['cid']['#value']);
+		$duration_row = db_fetch_array($time_entry_res);
+		if($duration_row['duration'] > 0)  $form['casetracker']['duration']['#default_value'] = $duration_row['duration'];
+      }  
+      
+  }
+}
+
+/**
+ * Implementation of hook_form_comment_form_alter().
+ */
+
+function oa_time_form_comment_form_alter(&$form, &$form_state) {
+  if(module_exists('casetracker')){
+  	$node = isset($form['nid']['#value']) ? node_load($form['nid']['#value']) : NULL;
+
+  	if (casetracker_is_case($node->type)) {
+    	$form['#node'] = $node;
+
+    	// add case options to the comment form.
+    	oa_time_case_form_common($form);
+    	// necessary for our casetracker_comment() callback.
+    	$form['revision_id'] = array('#type' => 'hidden', '#value' => $node->vid);
+  	}
+  }
+}
+
+function oa_time_case_form_common(&$form, $default_project = NULL) {
+	if(module_exists('casetracker')){
+	$form = casetracker_case_form_common($form, $default_project);
+	
+	$form['casetracker']['duration'] = array(
+      	  '#title' => t('Hours'),
+      	  '#type' => 'textfield',
+      	  '#size' => '10',
+      	  '#default_value' => '0',	  
+	);
+              
+	return $form;
+	}
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function oa_time_theme() {
+  return array(
+    'oa_time_tracking_form' => array(),    
+	
+  );
+}
+
+/**
+ * Override of theme_casetracker_case_summary().
+ */
+function oa_time_case_summary($case, $project) {
+  if(module_exists('atrium_casetracker')){
+	$output = atrium_casetracker_casetracker_case_summary($case, $project);
+	// cut the last two </div> tag
+	$output = substr($output, 0, -12);
+	$total_hours = t(db_result(db_query('SELECT SUM(te.duration) FROM {time_entry} te WHERE te.cid = %d' , $case->nid))); 
+  	$total_hours = number_format($total_hours, 2);
+	// insert total hours label	
+	$output .= "<div class='updated'><label>". t('Total Hours') ."</label>{$total_hours}</div>";
+	$output .= "</div>";
+	$output .= "</div>";
+	    
+	return $output;
+	}
+}
+
+/**
+ * Implementation of hook_block()
+ */ 
+function oa_time_block($op = 'list', $delta = 0, $edit = array()){
+	switch ($op){
+		case 'list':
+		$blocks[0]['info'] = t('Time counter');
+		$blocks[0]['cache'] = BLOCK_NO_CACHE;
+		$blocks[0]['status'] = TRUE;
+		$blocks[0]['region'] = 'right';
+		$blocks[0]['weight'] =100;		
+	 	return $blocks;
+		
+		case 'view':
+		if(oa_time_block_access()){
+			$block['subject'] = t('Time counter');
+			$block['content'] = '<div id = oa_time_counter_block></div>';			
+		}
+		return $block;
+	}
+}
+
+/**
+ * Implementation of hook_theme_registry_alter().
+ */
+function oa_time_theme_registry_alter(&$theme_registry) {
+   
+   $theme_registry['casetracker_case_summary']['function'] = 'oa_time_case_summary'; 
+   
+}
+
+/**
+ * Implementation of my own hook_time_handler_info().
+ */
+function oa_time_profile_info() {
+  return array(
+    'time_entry' => array(
+      'title' => t('Open Atrium Time tracking'),
+      'path' => drupal_get_path('module', 'oa_time'),
+    ),
+  );
+}
+
+
+
