@@ -4,13 +4,17 @@ if(Drupal.jsEnabled){
 	var start_time;
 	var elapsed_time;
 	var t;
+	var isFinished = false;
+	var isPaused = false;
 	$(document).ready(function() {
 		var block = $('#oa_time_counter_block');
 		
 		block.append('<div id = "tc_block_content"></div>');
+		
 		block.append('<div id = "tc_buttons" style="text-align:center;"><br></div>');		
 		$('#tc_buttons').append('<a href="#right" class="button" id="start_button">Start</a> &nbsp');
-		$('#tc_buttons').append('<a href="#right" class="button" id="stop_button">Stop</a>');
+		$('#tc_buttons').append('<a href="#right" class="button" id="pause_button">Pause</a> &nbsp');
+		$('#tc_buttons').append('<a href="#right" class="button" id="finish_button">Finish</a>');
 		
 		var content = $('#tc_block_content');
 		var table = '<table>\
@@ -42,31 +46,46 @@ if(Drupal.jsEnabled){
 		start.click(function()
 				{
 				
-				
-				var d = new Date();
-				start_time = d;
-				elapsed_time = 0;
-				$('#start_time').html(start_time.toLocaleTimeString());
-				$('#end_time').html('00:00:00');
-				$('#elapsed_time').html('00.00 hours');
+				if(isPaused == false || isFinished == true){
+					var d = new Date();
+					start_time = d;
+					elapsed_time = 0;
+					$('#start_time').html(start_time.toLocaleTimeString());
+					$('#end_time').html('00:00:00');
+					$('#elapsed_time').html('00.00 hours');
+					
+				}else isPaused = false;
+
 				timer();
-											
+				isFinished = false;
+				$('#block_clock').css({'color':'black'});							
 				});
-		
-		var stop = $('#stop_button');
-                stop.click(function()
+		var pause = $('#pause_button');
+                pause.click(function()
+                                {                                           
+                                if(isFinished == false){ 
+					isPaused = true;                    
+                                        clearTimeout(t);
+					$('#block_clock').css({'color':'red'});
+				}
+
+                                }
+			   );
+
+		var finish = $('#finish_button');
+                finish.click(function()
                                 {
 				clearTimeout(t);
-                var end_time = new Date(start_time.getTime() + elapsed_time);                           
+                		var end_time = new Date(start_time.getTime() + elapsed_time);                           
 				var elapsed = elapsed_time/3600000;  
 				
 				elapsed = new Number(elapsed);
-				
-                               								 
-                $('#end_time').html(end_time.toLocaleTimeString());
+				                               								 
+                		$('#end_time').html(end_time.toLocaleTimeString());
 				$('#elapsed_time').html(formatTime(elapsed.toFixed(2)) + ' hours');
 				$('#edit-casetracker-duration').val(elapsed.toFixed(2));
-				
+				isFinished = true;
+				$('#block_clock').css({'color':'black'});
                 });
 		
 		 
