@@ -4,17 +4,17 @@ if(Drupal.jsEnabled){
 	var start_time;
 	var elapsed_time;
 	var t;
-	var isFinished = false;
-	var isPaused = false;
+	var isReset = true;
+	var isStopped = true;
 	$(document).ready(function() {
 		var block = $('#oa_time_counter_block');
 		
 		block.append('<div id = "tc_block_content"></div>');
 		
 		block.append('<div id = "tc_buttons" style="text-align:center;"><br></div>');		
-		$('#tc_buttons').append('<a href="#right" class="button" id="start_button">Start</a> &nbsp');
-		$('#tc_buttons').append('<a href="#right" class="button" id="pause_button">Pause</a> &nbsp');
-		$('#tc_buttons').append('<a href="#right" class="button" id="finish_button">Finish</a>');
+		$('#tc_buttons').append('<a href="#right" class="button" id="start_button">Start</a> &nbsp');		
+		$('#tc_buttons').append('<a href="#right" class="button" id="stop_button">Stop</a> &nbsp');
+		$('#tc_buttons').append('<a href="#right" class="button" id="reset_button">Reset</a>');
 		
 		var content = $('#tc_block_content');
 		var table = '<table>\
@@ -45,47 +45,63 @@ if(Drupal.jsEnabled){
 		var start = $('#start_button');
 		start.click(function()
 				{
-				
-				if(isPaused == false || isFinished == true){
+				if(isReset){
 					var d = new Date();
 					start_time = d;
 					elapsed_time = 0;
-					$('#start_time').html(start_time.toLocaleTimeString());
-					$('#end_time').html('00:00:00');
-					$('#elapsed_time').html('00.00 hours');
+					$('#start_time').html(start_time.toLocaleTimeString());					
+					isReset = false;
+				}
+				if(isStopped){
 					
-				}else isPaused = false;
-
-				timer();
-				isFinished = false;
+					//$('#end_time').html('00:00:00');
+					//$('#elapsed_time').html('00.00 hours');
+					timer();
+					isStopped = false;					
+				}	
+				
 				$('#block_clock').css({'color':'black'});							
 				});
-		var pause = $('#pause_button');
-                pause.click(function()
+		var stop = $('#stop_button');
+                stop.click(function()
                                 {                                           
-                                if(isFinished == false){ 
-					isPaused = true;                    
-                                        clearTimeout(t);
-					$('#block_clock').css({'color':'red'});
-				}
+                                if(isStopped == false){ 
+									clearTimeout(t);
+									var end_time = new Date(start_time.getTime() + elapsed_time);                           
+									var elapsed = elapsed_time/3600000;  
+				
+									elapsed = new Number(elapsed);
+				                               								 
+									$('#end_time').html(end_time.toLocaleTimeString());
+									$('#elapsed_time').html(formatTime(elapsed.toFixed(2)) + ' hours');
+									$('#edit-casetracker-duration').val(elapsed.toFixed(2));
+									isStopped = true;         
+                                    
+									$('#block_clock').css({'color':'red'});
+								}
 
                                 }
 			   );
 
-		var finish = $('#finish_button');
-                finish.click(function()
+		var reset = $('#reset_button');
+                reset.click(function()
                                 {
-				clearTimeout(t);
-                		var end_time = new Date(start_time.getTime() + elapsed_time);                           
-				var elapsed = elapsed_time/3600000;  
-				
-				elapsed = new Number(elapsed);
-				                               								 
-                		$('#end_time').html(end_time.toLocaleTimeString());
-				$('#elapsed_time').html(formatTime(elapsed.toFixed(2)) + ' hours');
-				$('#edit-casetracker-duration').val(elapsed.toFixed(2));
-				isFinished = true;
-				$('#block_clock').css({'color':'black'});
+								if(isStopped == false){
+									clearTimeout(t); 
+									var elapsed = elapsed_time/3600000;  				
+									elapsed = new Number(elapsed);
+									$('#edit-casetracker-duration').val(elapsed.toFixed(2));
+									isStopped = true;
+								}
+								var d = new Date();
+								start_time = d;
+								elapsed_time = 0;	
+								$('#start_time').html('00:00:00');
+								$('#end_time').html('00:00:00');
+								$('#elapsed_time').html('00.00 hours');
+								$('#block_clock').html('00:00:00');
+								$('#block_clock').css({'color':'black'});
+								isReset = true;
                 });
 		
 		 
