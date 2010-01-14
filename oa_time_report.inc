@@ -104,7 +104,7 @@ function _oa_time_tracking_project_overview($form_values = NULL) {
   $hdrs = array(
     array('data' => t('Case'), 'field' => 'title'), 
     array('data' => t('Status'), 'field' => 'status'), 
-    array('data' => t('Hours'), 'field' => 'duration'), 
+    array('data' => t('Duration'), 'field' => 'duration'), 
     array(),
   );
 
@@ -126,7 +126,7 @@ function _oa_time_tracking_project_overview($form_values = NULL) {
   }
 
      
-   $total_hours = db_fetch_array(db_query("SELECT SUM(te.duration) AS duration FROM casetracker_case c LEFT JOIN time_entry te ON c.nid = te.cid WHERE c.pid = " .$pnid)); 
+   $total_minutes = db_fetch_array(db_query("SELECT SUM(te.duration) AS duration FROM casetracker_case c LEFT JOIN time_entry te ON c.nid = te.cid WHERE c.pid = " .$pnid)); 
    
    $sql = "SELECT n.nid, n.title AS title, cs.case_state_name AS status, SUM(te.duration)as duration 
 	   FROM casetracker_case c LEFT JOIN time_entry te ON c.nid = te.cid,
@@ -142,10 +142,15 @@ function _oa_time_tracking_project_overview($form_values = NULL) {
 	$record  = array();	    
 	$record[] = l($row['title'], 'node/'. $row['nid']);
 	$record[] = t($row['status']);
-	if(is_numeric($row['duration']))
-		$record[] = number_format($row['duration'], 2);
+	if(is_numeric($row['duration'])){
+		$hours = floor($row['duration'] / 60);
+		$minutes = (int)($row['duration']) % 60;
+		
+		$record[] = $hours ." hours " .$minutes ." minutes";
+		
+	}
 	else
-		$record[] = '0';
+		$record[] = '0 hours 0 minutes';
 	    
 	$rows[] = $record;
    }
@@ -153,7 +158,11 @@ function _oa_time_tracking_project_overview($form_values = NULL) {
    if ($rows){
        $node = node_load($pnid);
        $output = '<br><h2 class = node-title>'. l($node->title, 'node/'.$pnid) .'</h2>' ;
-       $output .= t('<b>Total hours: ' .number_format($total_hours['duration'],2) .'</b><br><br>');
+       $hours =floor($total_minutes['duration'] / 60);
+
+ 	$minutes = (int)($total_hours['duration']) % 60;
+		
+       $output .= t('<b>Total Duration: ' .$hours .' hours ' .$minutes .' minutes' .'</b><br><br>');
        $output .= theme('table', $hdrs, $rows);
        $output .= theme('pager', NULL, $lines, 0);
    }else{
@@ -345,7 +354,7 @@ function _oa_time_tracking_user_overview($form_values = NULL) {
     array('data' => t('Case'), 'field' => 'title'), 
 	array('data' => t('Project'), 'field' => 'ptitle'),
 	array('data' => t('Case status'), 'field' => 'status'),    
-    array('data' => t('Hours'), 'field' => 'duration'),     	
+    array('data' => t('Duration'), 'field' => 'duration'),     	
   );
   if($uid != 0)
   	$user_filter = " te.uid = " .$uid ." AND";
@@ -357,7 +366,7 @@ function _oa_time_tracking_user_overview($form_values = NULL) {
  
   $group = og_get_group_context();
 
-  $total_hours = db_fetch_array(db_query("SELECT SUM(te.duration) AS duration FROM time_entry te , og_ancestry o WHERE" 
+  $total_minutes = db_fetch_array(db_query("SELECT SUM(te.duration) AS duration FROM time_entry te , og_ancestry o WHERE" 
 		.$user_filter ." o.nid = te.cid AND o.group_nid = " .$group->nid ." AND te.timestamp BETWEEN " .$from ." AND " .$to )); 
 
   $sql = "SELECT n.nid AS nid, pj.nid AS pnid, n.title AS title, pj.title AS ptitle,
@@ -382,11 +391,12 @@ function _oa_time_tracking_user_overview($form_values = NULL) {
 	    $record[] = t($row['status']);
 	   
 	    if(is_numeric($row['duration'])){
-			$record[] = number_format($row['duration'], 2);
-			
+			$hours = floor($row['duration'] / 60);
+			$minutes = (int)($row['duration']) % 60;		
+			$record[] = $hours ." hours " .$minutes ." minutes";			
 	    }
 	    else
-			$record[] = '0';
+			$record[] = '0 hours 0 minutes';
 
 	    $rows[] = $record;
 	   }
@@ -401,7 +411,11 @@ function _oa_time_tracking_user_overview($form_values = NULL) {
 	    else 	    
 	    	$output .= '<br><h2 class = node-title>'. l($user->name, 'user/'.$uid) .'</h2>' ;
             
-	    $output .= t('<b>Total hours: ' . number_format($total_hours['duration'], 2) .'</b><br><br>');
+	    $hours = floor($total_minutes['duration'] / 60);
+	    $minutes = (int)($total_minutes['duration']) % 60;
+		
+            $output .= t('<b>Total Duration: ' .$hours .' hours ' .$minutes .' minutes' .'</b><br><br>');
+	    //$output .= t('<b>Total hours: ' . number_format($total_hours['duration'], 2) .'</b><br><br>');
 	    $output .= theme('table', $hdrs, $rows);
 	    $output .= theme('pager', NULL, $lines, 0);
 	    

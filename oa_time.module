@@ -91,9 +91,11 @@ function oa_time_comment(&$edit, $op) {
       
       	  $time = oa_time_load($edit['time']);
       	  $time->set_note($edit['comment']);
-      	  if ($time->duration != NULL && is_numeric($time->duration)) {
-         	$time->save();
-      	  }       
+      	  if (is_numeric($time->duration)) {
+         	if(($op == 'insert' && $time->duration > 0) ||($op == 'update' && $time->duration >=0))
+			$time->save();
+		  }
+	  
       }
     
   }
@@ -103,7 +105,9 @@ function oa_time_comment(&$edit, $op) {
         	
 	if($duration_row['duration'] > 0){ 
 		$rows = array();
-		$rows[] = array(t('Hours: '.$duration_row['duration']));
+		$hours = floor($duration_row['duration'] / 60);
+		$minutes = (int)$duration_row['duration'] % 60;
+		$rows[] = array(t('Duration: '.$hours .' hours ' .$minutes .' minutes'));
 		$edit->comment = theme('table', NULL, $rows, array('class' => 'case_changes')) . $edit->comment;
 		
 	}
@@ -119,7 +123,7 @@ function oa_time_comment(&$edit, $op) {
 function oa_time_form($form_state, $time_entry = NULL, $node = NULL) {
   if (!$time_entry) $time_entry = oa_time_load(NULL, $node);
 
-  // Make sure the time entry is valid for this context.
+// Make sure the time entry is valid for this context.
   if (!$time_entry || !$time_entry->validate()) return array();
 
   $form['time'] = $time_entry->form();
@@ -191,7 +195,8 @@ function oa_time_form_alter(&$form, &$form_state, $form_id) {
       if($form['cid']['#value'] != NULL){
         $time_entry_res = db_query('SELECT * FROM {time_entry} WHERE teid = %d ', $form['cid']['#value']);
 		$duration_row = db_fetch_array($time_entry_res);
-		if($duration_row['duration'] > 0)  $form['casetracker']['duration']['#default_value'] = $duration_row['duration'];
+		if($duration_row['duration'] >= 0)  
+			$form['casetracker']['duration']['#default_value'] = $duration_row['duration'];
       }  
       
   }
@@ -221,7 +226,7 @@ function oa_time_case_form_common(&$form, $default_project = NULL) {
 	$form = casetracker_case_form_common($form, $default_project);
 	
 	$form['casetracker']['duration'] = array(
-      	  '#title' => t('Hours'),
+      	  '#title' => t('Minutes'),
       	  '#type' => 'textfield',
       	  '#size' => '10',
       	  '#default_value' => '0',	  
@@ -249,10 +254,11 @@ function oa_time_case_summary($case, $project) {
 	$output = atrium_casetracker_casetracker_case_summary($case, $project);
 	// cut the last two </div> tag
 	$output = substr($output, 0, -12);
-	$total_hours = t(db_result(db_query('SELECT SUM(te.duration) FROM {time_entry} te WHERE te.cid = %d' , $case->nid))); 
-  	$total_hours = number_format($total_hours, 2);
+	$total_duration = t(db_result(db_query('SELECT SUM(te.duration) FROM {time_entry} te WHERE te.cid = %d' , $case->nid))); 
+  	$hours = floor($total_duration / 60);
+	$minutes = (int) $total_duration % 60;
 	// insert total hours label	
-	$output .= "<div class='updated'><label>". t('Total Hours') ."</label>{$total_hours}</div>";
+	$output .= "<div class='updated'><label>". t('Total Duration') ."</label>{$hours} hours {$minutes} minutes</div>";
 	$output .= "</div>";
 	$output .= "</div>";
 	    

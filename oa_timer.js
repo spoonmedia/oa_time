@@ -34,7 +34,7 @@ if(Drupal.jsEnabled){
 				</tr>\
 				<tr>\
 					<td><label>Elapsed time: </label></td>\
-					<td><div id = "elapsed_time">00.00 hours</div></td>\
+					<td><div id = "elapsed_time">00 hours 00 minutes</div></td>\
 				</tr>\
 				</tbody>\
 				</table>';
@@ -54,8 +54,6 @@ if(Drupal.jsEnabled){
 				}
 				if(isStopped){
 					
-					//$('#end_time').html('00:00:00');
-					//$('#elapsed_time').html('00.00 hours');
 					timer();
 					isStopped = false;					
 				}	
@@ -66,19 +64,19 @@ if(Drupal.jsEnabled){
                 stop.click(function()
                                 {                                           
                                 if(isStopped == false){ 
-									clearTimeout(t);
-									var end_time = new Date(start_time.getTime() + elapsed_time);                           
-									var elapsed = elapsed_time/3600000;  
-				
-									elapsed = new Number(elapsed);
-				                               								 
-									$('#end_time').html(end_time.toLocaleTimeString());
-									$('#elapsed_time').html(formatTime(elapsed.toFixed(2)) + ' hours');
-									$('#edit-casetracker-duration').val(elapsed.toFixed(2));
-									isStopped = true;         
+						clearTimeout(t);
+						var end_time = new Date(start_time.getTime() + elapsed_time);                           
+						var elapsed_hours = Math.floor(elapsed_time/3600000);  
+						var elapsed_minutes = Math.floor((elapsed_time - (60 * elapsed_hours)) /60000);
+										                               								 
+						$('#end_time').html(end_time.toLocaleTimeString());
+						$('#elapsed_time').html(formatTime(elapsed_hours) + ' hours ' + formatTime(elapsed_minutes) + ' minutes');
+						
+						$('#edit-casetracker-duration').val(elapsed_hours * 60 + elapsed_minutes);
+						isStopped = true;         
                                     
-									$('#block_clock').css({'color':'red'});
-								}
+						$('#block_clock').css({'color':'red'});
+				}
 
                                 }
 			   );
@@ -86,22 +84,23 @@ if(Drupal.jsEnabled){
 		var reset = $('#reset_button');
                 reset.click(function()
                                 {
-								if(isStopped == false){
-									clearTimeout(t); 
-									var elapsed = elapsed_time/3600000;  				
-									elapsed = new Number(elapsed);
-									$('#edit-casetracker-duration').val(elapsed.toFixed(2));
-									isStopped = true;
-								}
-								var d = new Date();
-								start_time = d;
-								elapsed_time = 0;	
-								$('#start_time').html('00:00:00');
-								$('#end_time').html('00:00:00');
-								$('#elapsed_time').html('00.00 hours');
-								$('#block_clock').html('00:00:00');
-								$('#block_clock').css({'color':'black'});
-								isReset = true;
+					if(isStopped == false){
+						clearTimeout(t); 
+						var elapsed_hours = formatTime(Math.floor(elapsed_time/3600000));  
+						var elapsed_minutes = formatTime(Math.floor((elapsed_time - (60 * elapsed_hours)) /60000));			
+						
+						$('#edit-casetracker-duration').val(elapsed_hours * 60 + elapsed_minutes);
+						isStopped = true;
+					}
+					var d = new Date();
+					start_time = d;
+					elapsed_time = 0;	
+					$('#start_time').html('00:00:00');
+					$('#end_time').html('00:00:00');
+					$('#elapsed_time').html('00 hours 00 minutes');
+					$('#block_clock').html('00:00:00');
+					$('#block_clock').css({'color':'black'});
+					isReset = true;
                 });
 		
 		 
