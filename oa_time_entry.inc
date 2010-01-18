@@ -116,7 +116,7 @@ class time_entry {
   }
 
   function set_duration($duration = NULL) {
-    if ($duration >= 0) $this->duration = (int) $duration;
+    if (is_numeric($duration) && $duration >= 0) $this->duration = $duration;
   }
 
   function duration($format = NULL) {

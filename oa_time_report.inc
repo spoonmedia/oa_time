@@ -160,7 +160,7 @@ function _oa_time_tracking_project_overview($form_values = NULL) {
        $output = '<br><h2 class = node-title>'. l($node->title, 'node/'.$pnid) .'</h2>' ;
        $hours =floor($total_minutes['duration'] / 60);
 
- 	$minutes = (int)($total_hours['duration']) % 60;
+ 	$minutes = (int)($total_minutes['duration']) % 60;
 		
        $output .= t('<b>Total Duration: ' .$hours .' hours ' .$minutes .' minutes' .'</b><br><br>');
        $output .= theme('table', $hdrs, $rows);
@@ -210,7 +210,7 @@ function oa_time_tracking_user_form($form_values)
    $line_options[ROW_OPTION3] = ROW_OPTION3;
 	
    //if current user has access to view time tracking report of other users
-  if(user_access('view all users time tracking')){
+  if(user_access('view all users time tracks')){
   	$sql = db_query("SELECT u.uid, u.name AS name FROM users u ,og_uid g WHERE u.uid = g.uid AND g.nid = %d", $group->nid);
   	$user_options = array();
   	$user_options[0] = 'all';
@@ -323,7 +323,7 @@ function _oa_time_tracking_user_overview($form_values = NULL) {
 		
   	if($_GET['user'] != NULL) $uid = $_GET['user'];	
 	else{
-		if(user_access('view all users time tracking'))
+		if(user_access('view all users time tracks'))
 			$uid = 0;
 		else
 			$uid = $GLOBALS['user']->uid;
