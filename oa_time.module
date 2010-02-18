@@ -6,38 +6,9 @@
 function oa_time_init(){
 
 	drupal_add_js(drupal_get_path('module','oa_time') .'/oa_timer.js');
+	module_load_include('module', 'views', 'views');	
 }
 
-/**
- * Implementation of hook_menu().
- */
-function oa_time_menu() {
-  
-  // Time Tracking tab
-  $items['node/%node/oa_time/project'] = array(
-    'page callback' => 'drupal_get_form', 
-    'page arguments' => array('oa_time_tracking_project_form'),
-    'access callback' => 'oa_time_access',    
-    'title' => t('Project Time Tracking'),
-    'type' => MENU_LOCAL_TASK,
-    'weight' => 10,
-    'file' => 'oa_time_report.inc',
-    
-  );
-  
-  $items['node/%node/oa_time/user'] = array(
-    'page callback' => 'drupal_get_form', 
-    'page arguments' => array('oa_time_tracking_user_form'),
-    'access callback' => 'oa_time_access',    
-    'title' => t('User Time Tracking'),
-    'type' => MENU_LOCAL_TASK,
-    'weight' => 10,
-    'file' => 'oa_time_report.inc',
-    
-  );
- 
-  return $items;
-}
 
 /**
  * Implementation of hook_perm().
@@ -168,7 +139,7 @@ function oa_time_block_access(){
 function oa_time_form_alter(&$form, &$form_state, $form_id) {
   
   if ($form_id == 'comment_form') {
-  /** Code from casetracker module **/
+   /** Code from casetracker module **/
    if (!empty($form['#node'])) {
     $node = $form['#node'];
 
@@ -200,6 +171,78 @@ function oa_time_form_alter(&$form, &$form_state, $form_id) {
       }  
       
   }
+	/*Modifying views filter form*/
+  	else if ($form_id == 'views_exposed_form') {
+		if ($form_state['view']->name == 'time_tracker_report' || $form_state['view']->name == 'time_tracker_total_duration') {
+               		 $form_extra['pager_rows'] = array(
+                		'#type' => 'select',
+                		'#title' => t('Rows per page'),
+                		'#options' => array(25,50,100),
+                	);
+                	$form = array_merge($form_extra, $form);
+                	 $form['timestamp'] = array(
+       				'#type' => 'date_popup',
+       				'#date_format' => 'm/d/Y',       				
+        		);
+			$form['timestamp_1'] = array(
+                                '#type' => 'date_popup',
+                                '#date_format' => 'm/d/Y',
+                        );
+			
+			global $user;
+                        $group_query = "SELECT node.nid AS nid FROM node node  LEFT JOIN og_uid og_uid ON node.nid = og_uid.nid WHERE og_uid.uid = " . $user->uid;
+			// select all projects of current user's groups
+			$project_query = db_query("SELECT n.nid, n.title FROM node n, og_ancestry o 
+                        WHERE o.group_nid IN (%s) AND n.nid = o.nid AND n.type = 'casetracker_basic_project'", $group_query);
+                        $project_options = array();
+                        $project_options[0] = 'all';                    
+                        // get list of current group's projects
+                        while($row = db_fetch_array($project_query)){
+                               
+                                $project_options[$row['nid']] = $row['title'];
+                        }
+			if(empty($form_state['view']->exposed_input['pid'])) $form['pid']['#value'] = null;
+                        else  $form['pid']['#value'] = $form_state['view']->exposed_input['pid'];
+                        
+                        $form['pid']['#options'] = $project_options;
+			// select all users from same group as current user
+			$sql = db_query("SELECT u.uid, u.name AS name FROM users u ,og_uid g WHERE u.uid = g.uid AND g.nid IN (%s) ", $group_query);
+        		$user_options = array();
+       			$user_options[0] = 'all';
+		 	if(user_access('view all users time tracks')){
+				$sql = db_query("SELECT u.uid, u.name AS name FROM users u ,og_uid g WHERE u.uid = g.uid AND g.nid IN (%s) ", $group_query);
+        			while($row = db_fetch_array($sql)){
+                
+					$user_options[$row['uid']] = $row['name'];
+        			}
+			}else
+				$user_options[$user->uid] = $user->name;
+			$form['uid'] = array(
+        			'#type' => 'select',
+        	 		'#options' => $user_options,
+				 
+        		);
+			if(empty($form_state['view']->exposed_input['uid'])) $form['uid']['#value'] = '';
+			else  $form['uid']['#value'] = $form_state['view']->exposed_input['uid'];
+			
+			$form['#info']['filter-pager_rows'] = array(
+                        	'value' => 'pager_rows',
+                	);
+			$rows = $form['pager_rows']['#options'][$form_state['view']->exposed_input['pager_rows']];
+			if($rows > 0)
+				$form['#parameters']['1']['view']->pager['items_per_page'] = $rows;
+			else
+				$form['#parameters']['1']['view']->pager['items_per_page'] = 25;
+			
+			if($form_state['view']->name == 'time_tracker_report'){		
+                		$form_state['view']->attachment_before = views_embed_view('time_tracker_total_duration');
+								
+			}
+			if($form_state['view']->name == 'time_tracker_total_duration')
+				$form['#attributes'] = array('style' => 'display:none');	
+		}
+
+	}
 }
 
 /**
@@ -272,22 +315,30 @@ function oa_time_case_summary($case, $project) {
 function oa_time_block($op = 'list', $delta = 0, $edit = array()){
 	switch ($op){
 		case 'list':
-		$blocks[0]['info'] = t('Time counter');
+		$blocks[0]['info'] = t('Time Tracker Block ');
 		$blocks[0]['cache'] = BLOCK_NO_CACHE;
 		$blocks[0]['status'] = TRUE;
 		$blocks[0]['region'] = 'right';
 		$blocks[0]['weight'] =100;		
-	 	return $blocks;
+		return $blocks;
 		
 		case 'view':
 		if(oa_time_block_access()){
-			$block['subject'] = t('Time counter');
-			$block['content'] = '<div id = oa_time_counter_block></div>';			
+			$block['subject'] = t('Time Tracker Block');
+			$block['content'] = oa_time_block_content();			
 		}
 		return $block;
 	}
 }
 
+function oa_time_block_content(){
+	
+	$output = '<div id = oa_time_counter_block></div><br/>';
+	$output .= '<div style = "text-align:center;">';
+	$output .= l('View Report','oa_time/time_tracker',array('attributes' => array('target' => '_blank', 'class' => 'button')));
+	$output .= '</div>';
+	return $output;
+}
 /**
  * Implementation of hook_theme_registry_alter().
  */
@@ -309,5 +360,7 @@ function oa_time_profile_info() {
   );
 }
 
-
+function oa_time_views_api(){
+	return array('api' => 2.0);
+}
 

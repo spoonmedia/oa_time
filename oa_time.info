@@ -4,5 +4,4 @@ description = Track time on Atrium Casetracker cases and project.
 package = Accounting
 core = 6.x
 dependencies[] = atrium_casetracker
-
-
+dependencies[] = views

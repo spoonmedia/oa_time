@@ -14,8 +14,8 @@ if(Drupal.jsEnabled){
 		block.append('<div id = "tc_buttons" style="text-align:center;"><br></div>');		
 		$('#tc_buttons').append('<a href="#right" class="button" id="start_button">Start</a> &nbsp');		
 		$('#tc_buttons').append('<a href="#right" class="button" id="stop_button">Stop</a> &nbsp');
-		$('#tc_buttons').append('<a href="#right" class="button" id="reset_button">Reset</a>');
-		
+		$('#tc_buttons').append('<a href="#right" class="button" id="reset_button">Reset</a> &nbsp &nbsp');
+			
 		var content = $('#tc_block_content');
 		var table = '<table>\
 				<tbody>\
