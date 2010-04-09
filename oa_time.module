@@ -233,7 +233,7 @@ function oa_time_form_alter(&$form, &$form_state, $form_id) {
 				$form['#parameters']['1']['view']->pager['items_per_page'] = $rows;
 			else
 				$form['#parameters']['1']['view']->pager['items_per_page'] = 25;
-			
+		
 			if($form_state['view']->name == 'time_tracker_report'){		
                 		$form_state['view']->attachment_before = views_embed_view('time_tracker_total_duration');
 								
@@ -244,6 +244,7 @@ function oa_time_form_alter(&$form, &$form_state, $form_id) {
 
 	}
 }
+
 
 /**
  * Implementation of hook_form_comment_form_alter().

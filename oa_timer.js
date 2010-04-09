@@ -67,7 +67,7 @@ if(Drupal.jsEnabled){
 						clearTimeout(t);
 						var end_time = new Date(start_time.getTime() + elapsed_time);                           
 						var elapsed_hours = Math.floor(elapsed_time/3600000);  
-						var elapsed_minutes = Math.floor((elapsed_time - (60 * elapsed_hours)) /60000);
+						var elapsed_minutes = Math.floor((elapsed_time % 3600000)) /60000);
 										                               								 
 						$('#end_time').html(end_time.toLocaleTimeString());
 						$('#elapsed_time').html(formatTime(elapsed_hours) + ' hours ' + formatTime(elapsed_minutes) + ' minutes');
@@ -87,7 +87,7 @@ if(Drupal.jsEnabled){
 					if(isStopped == false){
 						clearTimeout(t); 
 						var elapsed_hours = formatTime(Math.floor(elapsed_time/3600000));  
-						var elapsed_minutes = formatTime(Math.floor((elapsed_time - (60 * elapsed_hours)) /60000));			
+						var elapsed_minutes = formatTime(Math.floor((elapsed_time % 3600000) /60000));			
 						
 						$('#edit-casetracker-duration').val(elapsed_hours * 60 + elapsed_minutes);
 						isStopped = true;

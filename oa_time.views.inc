@@ -148,6 +148,11 @@ function oa_time_views_query_alter(&$view, &$query){
             $group_query = "SELECT node.nid AS nid FROM node node  LEFT JOIN og_uid og_uid ON node.nid = og_uid.nid WHERE og_uid.uid = " . $user->uid;
 	    $query->add_where('AND', 'og_ancestry.group_nid IN (%s)', $group_query);
 	    $query->add_groupby('time_entry.cid');        
+	    
+		foreach($query->where[0]['clauses'] as $i=>$clause){
+			if($clause == 'time_entry.timestamp <= %s')
+				$query->where[0]['args'][$i] += 86400; // add 1 day in seconds
+		}
 	}
 	else if($view->name == 'time_tracker_total_duration'){
             $query->clear_fields();
@@ -156,7 +161,12 @@ function oa_time_views_query_alter(&$view, &$query){
             global $user;
             $group_query = "SELECT node.nid AS nid FROM node node  LEFT JOIN og_uid og_uid ON node.nid = og_uid.nid WHERE og_uid.uid = " . $user->uid;
             $query->add_where('AND', 'og_ancestry.group_nid IN (%s)', $group_query);
-                     
+
+                foreach($query->where[0]['clauses'] as $i=>$clause){
+                        if($clause == 'time_entry.timestamp <= %s')
+                                $query->where[0]['args'][$i] += 86400; // add 1 day in seconds
+                }
+     
         }
 
 }
